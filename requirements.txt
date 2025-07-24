@@ -1,0 +1,14 @@
+# ===== DEPENDÊNCIAS PRINCIPAIS =====
+pandas>=2.0.0
+tk  # Tkinter já vem no Python padrão, mas incluí por compatibilidade com algumas distros
+
+# ===== OCR E IA =====
+easyocr>=1.7.2
+
+# ===== TORCH (para OCR com CUDA) =====
+# Para Python <=3.12 com GPU (CUDA):
+# Instale manualmente com o comando oficial do PyTorch:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+# Para Python 3.13 (somente CPU):
+# pip install easyocr (o torch será instalado automaticamente apenas CPU)
