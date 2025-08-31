@@ -249,6 +249,89 @@ def renomear_imagens_por_id():
     tempo = round(fim - inicio, 2)
     messagebox.showinfo("Concluído", f"Renomeação finalizada!\n{status_gpu}\nTempo total: {tempo}s")
 
+# ================== FUNÇÃO ORGANIZAR ARQUIVOS POR PREFIXO ==================
+def organizar_arquivos_por_prefixo():
+    """Organiza arquivos por prefixo (antes do underscore) criando pastas automaticamente."""
+    pasta = filedialog.askdirectory(title="Selecione a pasta com arquivos para organizar")
+    if not pasta:
+        messagebox.showinfo("Cancelado", "Nenhuma pasta selecionada.")
+        return
+
+    pasta_path = Path(pasta)
+    arquivos = [f for f in pasta_path.iterdir() if f.is_file() and '_' in f.name]
+    
+    if not arquivos:
+        messagebox.showinfo("Informação", "Nenhum arquivo com underscore encontrado para organizar.")
+        return
+
+    splash, barra, percentual_label = criar_tela_progresso(janela, "Organizando arquivos por prefixo...")
+    total = len(arquivos)
+    inicio = time.time()
+    arquivos_movidos = 0
+
+    for i, arquivo in enumerate(arquivos, start=1):
+        try:
+            # Extrair prefixo (parte antes do primeiro underscore)
+            nome_arquivo = arquivo.name
+            prefixo = nome_arquivo.split('_')[0]
+            
+            # Criar pasta para o prefixo se não existir
+            pasta_destino = pasta_path / prefixo
+            pasta_destino.mkdir(exist_ok=True)
+            
+            # Mover arquivo para a pasta do prefixo
+            destino = pasta_destino / nome_arquivo
+            shutil.move(str(arquivo), str(destino))
+            arquivos_movidos += 1
+            
+            logging.info(f"✔️ Arquivo movido: {nome_arquivo} → {prefixo}/")
+            atualizar_progresso(splash, barra, percentual_label, i, total, f"Movendo: {nome_arquivo}")
+            
+        except Exception as e:
+            logging.error(f"Erro ao processar {arquivo.name}: {e}")
+
+    splash.destroy()
+    fim = time.time()
+    tempo = round(fim - inicio, 2)
+    messagebox.showinfo("Concluído", 
+                       f"Organização finalizada!\n"
+                       f"Arquivos movidos: {arquivos_movidos}\n"
+                       f"Tempo total: {tempo}s")
+
+# ================== FUNÇÃO LISTAR PASTAS EM ARQUIVO TXT ==================
+def listar_pastas_em_txt():
+    """Lista todas as pastas existentes em um arquivo .txt."""
+    pasta = filedialog.askdirectory(title="Selecione a pasta para listar as subpastas")
+    if not pasta:
+        messagebox.showinfo("Cancelado", "Nenhuma pasta selecionada.")
+        return
+
+    pasta_path = Path(pasta)
+    subpastas = [d for d in pasta_path.iterdir() if d.is_dir()]
+    
+    if not subpastas:
+        messagebox.showinfo("Informação", "Nenhuma subpasta encontrada.")
+        return
+
+    # Criar arquivo de lista
+    arquivo_lista = pasta_path / "lista_pastas.txt"
+    
+    try:
+        with open(arquivo_lista, 'w', encoding='utf-8') as f:
+            for subpasta in subpastas:
+                f.write(f"{subpasta.name}\n")
+        
+        messagebox.showinfo("Concluído", 
+                           f"Lista de pastas gerada com sucesso!\n"
+                           f"Arquivo: {arquivo_lista.name}\n"
+                           f"Total de pastas: {len(subpastas)}")
+        
+        logging.info(f"✔️ Lista de pastas gerada: {arquivo_lista.name} com {len(subpastas)} pastas")
+        
+    except Exception as e:
+        messagebox.showerror("Erro", f"Falha ao gerar lista de pastas:\n{e}")
+        logging.error(f"Erro ao gerar lista: {e}")
+
 # ================== TESTE CUDA AO INICIAR ==================
 def teste_cuda_inicial():
     try:
@@ -284,42 +367,76 @@ def sair():
 
 janela = tk.Tk()
 janela.title("Gerenciador de Pastas e Imagens v2.0")
-janela.geometry("400x400")
+janela.geometry("420x500")
 
 # Centralizar janela
 janela.update_idletasks()
-x = (janela.winfo_screenwidth() // 2) - (400 // 2)
-y = (janela.winfo_screenheight() // 2) - (400 // 2)
-janela.geometry(f"400x400+{x}+{y}")
+x = (janela.winfo_screenwidth() // 2) - (420 // 2)
+y = (janela.winfo_screenheight() // 2) - (500 // 2)
+janela.geometry(f"420x500+{x}+{y}")
 
-label = tk.Label(janela, text="Gerenciador de Pastas e Imagens v2.0", font=("Arial", 14, "bold"), fg="darkblue")
+# Frame principal com scrollbar
+main_frame = tk.Frame(janela)
+main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+# Canvas para scroll
+canvas = tk.Canvas(main_frame)
+scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+scrollable_frame = tk.Frame(canvas)
+
+scrollable_frame.bind(
+    "<Configure>",
+    lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+)
+
+canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+canvas.configure(yscrollcommand=scrollbar.set)
+
+# Título principal
+label = tk.Label(scrollable_frame, text="Gerenciador de Pastas e Imagens v2.0", font=("Arial", 14, "bold"), fg="darkblue")
 label.pack(pady=15)
 
-subtitle = tk.Label(janela, text="Escolha uma opção:", font=("Arial", 10), fg="gray")
+subtitle = tk.Label(scrollable_frame, text="Escolha uma opção:", font=("Arial", 10), fg="gray")
 subtitle.pack(pady=5)
 
-btn0 = tk.Button(janela, text="📁 Mover pastas e criar nova com base no CSV", command=mover_pastas_por_csv, width=35, height=2, font=("Arial", 10), bg="lightblue")
+btn0 = tk.Button(scrollable_frame, text="📁 Mover pastas e criar nova com base no CSV", command=mover_pastas_por_csv, width=35, height=2, font=("Arial", 10), bg="lightblue")
 btn0.pack(pady=8)
 
-btn0_1 = tk.Button(janela, text="📁 Mover apenas pastas existentes (CSV)", command=mover_pastas_por_csv_se_existir, width=35, height=2, font=("Arial", 10), bg="lightcyan")
+btn0_1 = tk.Button(scrollable_frame, text="📁 Mover apenas pastas existentes (CSV)", command=mover_pastas_por_csv_se_existir, width=35, height=2, font=("Arial", 10), bg="lightcyan")
 btn0_1.pack(pady=8)
 
-btn1 = tk.Button(janela, text="🖼️ Renomear imagens pelo ID do jogador", command=renomear_imagens_por_id, width=35, height=2, font=("Arial", 10), bg="lightgreen")
+btn1 = tk.Button(scrollable_frame, text="🖼️ Renomear imagens pelo ID do jogador", command=renomear_imagens_por_id, width=35, height=2, font=("Arial", 10), bg="lightgreen")
 btn1.pack(pady=8)
 
-btn2 = tk.Button(janela, text="⚡ Testar CUDA/GPU", command=teste_cuda_inicial, width=35, height=2, font=("Arial", 10), bg="lightyellow")
+btn2 = tk.Button(scrollable_frame, text="⚡ Testar CUDA/GPU", command=teste_cuda_inicial, width=35, height=2, font=("Arial", 10), bg="lightyellow")
 btn2.pack(pady=8)
 
-btn3 = tk.Button(janela, text="❌ Sair", command=sair, width=35, height=2, font=("Arial", 10), bg="lightcoral")
+btn3 = tk.Button(scrollable_frame, text="🗂️ Organizar arquivos por prefixo", command=organizar_arquivos_por_prefixo, width=35, height=2, font=("Arial", 10), bg="lightcoral")
 btn3.pack(pady=8)
 
+btn4 = tk.Button(scrollable_frame, text="📋 Listar pastas em TXT", command=listar_pastas_em_txt, width=35, height=2, font=("Arial", 10), bg="plum")
+btn4.pack(pady=8)
+
+btn5 = tk.Button(scrollable_frame, text="❌ Sair", command=sair, width=35, height=2, font=("Arial", 10), bg="lightcoral")
+btn5.pack(pady=8)
+
 # ✅ Status do OCR no rodapé
-status_label = tk.Label(janela, text="OCR carregando...", font=("Arial", 10), fg="blue")
+status_label = tk.Label(scrollable_frame, text="OCR carregando...", font=("Arial", 10), fg="blue")
 status_label.pack(pady=10)
 
 # Informações do sistema
-info_label = tk.Label(janela, text="Versão 2.0 | Melhorias: Validações, Logging, Interface", font=("Arial", 8), fg="gray")
+info_label = tk.Label(scrollable_frame, text="Versão 2.1 | Novas ferramentas: Organização por prefixo e Lista de pastas", font=("Arial", 8), fg="gray")
 info_label.pack(pady=5)
+
+# Empacotar canvas e scrollbar
+canvas.pack(side="left", fill="both", expand=True)
+scrollbar.pack(side="right", fill="y")
+
+# Configurar scroll com mouse
+def _on_mousewheel(event):
+    canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
 # Inicializa OCR em segundo plano ao abrir o programa
 threading.Thread(target=inicializar_ocr_em_segundo_plano, daemon=True).start()
