@@ -218,24 +218,23 @@ def renomear_imagens_por_id():
         try:
             results = reader_ocr.readtext(caminho)
             texto_extraido = " ".join([res[1] for res in results])
-            logging.debug(f"DEBUG OCR ({arquivo.name}): {texto_extraido}")
 
-            depois_id = re.search(r"JOGADOR\s*ID(.*)", texto_extraido, re.IGNORECASE)
+            depois_id = re.search(r"JOGADOR\s*ID\s*=?\s*(\d+)", texto_extraido, re.IGNORECASE)
             if depois_id:
-                numeros = re.findall(r"\d{4,6}", depois_id.group(1))
-                if numeros:
-                    id_jogador = numeros[-1]
-                    novo_nome = pasta_path / f"{id_jogador}.jpg"
-                    # Evitar sobrescrever arquivo existente
-                    if novo_nome.exists() and novo_nome != arquivo:
-                        contador = 1
-                        while novo_nome.exists():
-                            novo_nome = pasta_path / f"{id_jogador}_{contador}.jpg"
-                            contador += 1
-                    arquivo.rename(novo_nome)
-                    logging.info(f"✔️ Renomeado: {arquivo.name} → {novo_nome.name}")
-                    atualizar_progresso(splash, barra, percentual_label, i, total, f"Renomeado: {arquivo.name}")
-                    continue
+                id_jogador = depois_id.group(1)
+                # Manter a extensão original do arquivo
+                extensao = arquivo.suffix.lower()
+                novo_nome = pasta_path / f"{id_jogador}{extensao}"
+                # Evitar sobrescrever arquivo existente
+                if novo_nome.exists():
+                    contador = 1
+                    while novo_nome.exists():
+                        novo_nome = pasta_path / f"{id_jogador}_{contador}{extensao}"
+                        contador += 1
+                arquivo.rename(novo_nome)
+                logging.info(f"✔️ Renomeado: {arquivo.name} → {novo_nome.name}")
+                atualizar_progresso(splash, barra, percentual_label, i, total, f"Renomeado: {arquivo.name}")
+                continue
 
             logging.warning(f"⚠️ ID não encontrado em {arquivo.name}")
 
@@ -248,55 +247,6 @@ def renomear_imagens_por_id():
     fim = time.time()
     tempo = round(fim - inicio, 2)
     messagebox.showinfo("Concluído", f"Renomeação finalizada!\n{status_gpu}\nTempo total: {tempo}s")
-
-# ================== FUNÇÃO ORGANIZAR ARQUIVOS POR PREFIXO ==================
-def organizar_arquivos_por_prefixo():
-    """Organiza arquivos por prefixo (antes do underscore) criando pastas automaticamente."""
-    pasta = filedialog.askdirectory(title="Selecione a pasta com arquivos para organizar")
-    if not pasta:
-        messagebox.showinfo("Cancelado", "Nenhuma pasta selecionada.")
-        return
-
-    pasta_path = Path(pasta)
-    arquivos = [f for f in pasta_path.iterdir() if f.is_file() and '_' in f.name]
-    
-    if not arquivos:
-        messagebox.showinfo("Informação", "Nenhum arquivo com underscore encontrado para organizar.")
-        return
-
-    splash, barra, percentual_label = criar_tela_progresso(janela, "Organizando arquivos por prefixo...")
-    total = len(arquivos)
-    inicio = time.time()
-    arquivos_movidos = 0
-
-    for i, arquivo in enumerate(arquivos, start=1):
-        try:
-            # Extrair prefixo (parte antes do primeiro underscore)
-            nome_arquivo = arquivo.name
-            prefixo = nome_arquivo.split('_')[0]
-            
-            # Criar pasta para o prefixo se não existir
-            pasta_destino = pasta_path / prefixo
-            pasta_destino.mkdir(exist_ok=True)
-            
-            # Mover arquivo para a pasta do prefixo
-            destino = pasta_destino / nome_arquivo
-            shutil.move(str(arquivo), str(destino))
-            arquivos_movidos += 1
-            
-            logging.info(f"✔️ Arquivo movido: {nome_arquivo} → {prefixo}/")
-            atualizar_progresso(splash, barra, percentual_label, i, total, f"Movendo: {nome_arquivo}")
-            
-        except Exception as e:
-            logging.error(f"Erro ao processar {arquivo.name}: {e}")
-
-    splash.destroy()
-    fim = time.time()
-    tempo = round(fim - inicio, 2)
-    messagebox.showinfo("Concluído", 
-                       f"Organização finalizada!\n"
-                       f"Arquivos movidos: {arquivos_movidos}\n"
-                       f"Tempo total: {tempo}s")
 
 # ================== FUNÇÃO LISTAR PASTAS EM ARQUIVO TXT ==================
 def listar_pastas_em_txt():
@@ -764,22 +714,19 @@ subtitle.pack(pady=10)
 btn4 = tk.Button(scrollable_frame, text="1. Listar todas as pastas em um arquivo .txt", command=listar_pastas_em_txt, width=35, height=2, font=("Arial", 10), bg="plum")
 btn4.pack(pady=8)
 
-btn3 = tk.Button(scrollable_frame, text="2. Organizar arquivos por prefixo", command=organizar_arquivos_por_prefixo, width=35, height=2, font=("Arial", 10), bg="lightcoral")
-btn3.pack(pady=8)
-
-btn1 = tk.Button(scrollable_frame, text="3. Renomear imagens pelo ID do jogador", command=renomear_imagens_por_id, width=35, height=2, font=("Arial", 10), bg="lightgreen")
+btn1 = tk.Button(scrollable_frame, text="2. Renomear imagens pelo ID do jogador", command=renomear_imagens_por_id, width=35, height=2, font=("Arial", 10), bg="lightgreen")
 btn1.pack(pady=8)
 
-btn_faces = tk.Button(scrollable_frame, text="4. Mover todo conteúdo do jogador por FPK", command=mover_faces_por_fpk, width=35, height=2, font=("Arial", 10), bg="orange")
+btn_faces = tk.Button(scrollable_frame, text="3. Mover todo conteúdo do jogador por FPK", command=mover_faces_por_fpk, width=35, height=2, font=("Arial", 10), bg="orange")
 btn_faces.pack(pady=8)
 
-btn_faces_completa = tk.Button(scrollable_frame, text="5. Mover pasta completa do jogador por FPK", command=mover_pasta_completa_por_fpk, width=35, height=2, font=("Arial", 10), bg="darkorange")
+btn_faces_completa = tk.Button(scrollable_frame, text="4. Mover pasta completa do jogador por FPK", command=mover_pasta_completa_por_fpk, width=35, height=2, font=("Arial", 10), bg="darkorange")
 btn_faces_completa.pack(pady=8)
 
-btn0_1 = tk.Button(scrollable_frame, text="6. Mover apenas pastas existentes (CSV)", command=mover_pastas_por_csv_se_existir, width=35, height=2, font=("Arial", 10), bg="lightcyan")
+btn0_1 = tk.Button(scrollable_frame, text="5. Mover apenas pastas existentes (CSV)", command=mover_pastas_por_csv_se_existir, width=35, height=2, font=("Arial", 10), bg="lightcyan")
 btn0_1.pack(pady=8)
 
-btn0 = tk.Button(scrollable_frame, text="7. Mover pastas e criar nova com base no CSV", command=mover_pastas_por_csv, width=35, height=2, font=("Arial", 10), bg="lightblue")
+btn0 = tk.Button(scrollable_frame, text="6. Mover pastas e criar nova com base no CSV", command=mover_pastas_por_csv, width=35, height=2, font=("Arial", 10), bg="lightblue")
 btn0.pack(pady=8)
 
 btn5 = tk.Button(scrollable_frame, text="❌ Sair", command=sair, width=35, height=2, font=("Arial", 10), bg="lightcoral")
@@ -793,7 +740,7 @@ status_label = tk.Label(scrollable_frame, text="OCR carregando...", font=("Arial
 status_label.pack(pady=10)
 
 # Informações do sistema
-info_label = tk.Label(scrollable_frame, text="Versão 2.3 | Novas ferramentas: Mover pasta completa por FPK, Mover conteúdo por FPK, Organização por prefixo e Lista de pastas", font=("Arial", 8), fg="gray")
+info_label = tk.Label(scrollable_frame, text="Versão 2.3", font=("Arial", 8), fg="gray")
 info_label.pack(pady=5)
 
 # Empacotar canvas e scrollbar centralizados
