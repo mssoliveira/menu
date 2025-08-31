@@ -628,8 +628,8 @@ def mover_pasta_completa_por_fpk():
             
             logging.info(f"✅ Pasta do jogador encontrada: {pasta_jogador}")
             
-            # Mover a pasta completa do jogador para o mesmo diretório onde está a pasta ID (não dentro dela)
-            diretorio_destino = pasta_face.parent  # Diretório pai da pasta ID
+            # Mover a pasta completa do jogador para um nível acima do diretório onde está a pasta ID
+            diretorio_destino = pasta_face.parent.parent  # Diretório pai do diretório pai da pasta ID
             logging.info(f"📁 Diretório de destino: {diretorio_destino}")
             
             # Verificar se a pasta do jogador já existe no destino
