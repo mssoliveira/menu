@@ -399,26 +399,26 @@ label.pack(pady=15)
 subtitle = tk.Label(scrollable_frame, text="Escolha uma opção:", font=("Arial", 10), fg="gray")
 subtitle.pack(pady=5)
 
-btn0 = tk.Button(scrollable_frame, text="📁 Mover pastas e criar nova com base no CSV", command=mover_pastas_por_csv, width=35, height=2, font=("Arial", 10), bg="lightblue")
-btn0.pack(pady=8)
+btn4 = tk.Button(scrollable_frame, text="1. Listar todas as pastas em um arquivo .txt", command=listar_pastas_em_txt, width=35, height=2, font=("Arial", 10), bg="plum")
+btn4.pack(pady=8)
 
-btn0_1 = tk.Button(scrollable_frame, text="📁 Mover apenas pastas existentes (CSV)", command=mover_pastas_por_csv_se_existir, width=35, height=2, font=("Arial", 10), bg="lightcyan")
-btn0_1.pack(pady=8)
-
-btn1 = tk.Button(scrollable_frame, text="🖼️ Renomear imagens pelo ID do jogador", command=renomear_imagens_por_id, width=35, height=2, font=("Arial", 10), bg="lightgreen")
-btn1.pack(pady=8)
-
-btn2 = tk.Button(scrollable_frame, text="⚡ Testar CUDA/GPU", command=teste_cuda_inicial, width=35, height=2, font=("Arial", 10), bg="lightyellow")
-btn2.pack(pady=8)
-
-btn3 = tk.Button(scrollable_frame, text="🗂️ Organizar arquivos por prefixo", command=organizar_arquivos_por_prefixo, width=35, height=2, font=("Arial", 10), bg="lightcoral")
+btn3 = tk.Button(scrollable_frame, text="2. Organizar arquivos por prefixo", command=organizar_arquivos_por_prefixo, width=35, height=2, font=("Arial", 10), bg="lightcoral")
 btn3.pack(pady=8)
 
-btn4 = tk.Button(scrollable_frame, text="📋 Listar pastas em TXT", command=listar_pastas_em_txt, width=35, height=2, font=("Arial", 10), bg="plum")
-btn4.pack(pady=8)
+btn1 = tk.Button(scrollable_frame, text="3. Renomear imagens pelo ID do jogador", command=renomear_imagens_por_id, width=35, height=2, font=("Arial", 10), bg="lightgreen")
+btn1.pack(pady=8)
+
+btn0_1 = tk.Button(scrollable_frame, text="4. Mover apenas pastas existentes (CSV)", command=mover_pastas_por_csv_se_existir, width=35, height=2, font=("Arial", 10), bg="lightcyan")
+btn0_1.pack(pady=8)
+
+btn0 = tk.Button(scrollable_frame, text="5. Mover pastas e criar nova com base no CSV", command=mover_pastas_por_csv, width=35, height=2, font=("Arial", 10), bg="lightblue")
+btn0.pack(pady=8)
 
 btn5 = tk.Button(scrollable_frame, text="❌ Sair", command=sair, width=35, height=2, font=("Arial", 10), bg="lightcoral")
 btn5.pack(pady=8)
+
+# btn2 = tk.Button(scrollable_frame, text="⚡ Testar CUDA/GPU", command=teste_cuda_inicial, width=35, height=2, font=("Arial", 10), bg="lightyellow")
+# btn2.pack(pady=8)
 
 # ✅ Status do OCR no rodapé
 status_label = tk.Label(scrollable_frame, text="OCR carregando...", font=("Arial", 10), fg="blue")
