@@ -520,6 +520,175 @@ def mover_faces_por_fpk():
     
     logging.info(f"✅ Processo de faces concluído: {faces_processadas} faces, {arquivos_movidos} arquivos movidos em {tempo}s")
 
+# ================== FUNÇÃO MOVER PASTA COMPLETA POR FPK ==================
+def mover_pasta_completa_por_fpk():
+    """Busca face.fpk em todas as pastas da parte 1, extrai nome do jogador e move a pasta completa da parte 2."""
+    
+    logging.info("🚀 Iniciando função mover_pasta_completa_por_fpk")
+    
+    # Selecionar diretório da parte 1 (faces)
+    diretorio_faces = filedialog.askdirectory(title="Selecione o diretório da PARTE 1 (onde estão as faces)")
+    if not diretorio_faces:
+        logging.info("❌ Nenhum diretório de faces selecionado - operação cancelada")
+        messagebox.showinfo("Cancelado", "Nenhum diretório de faces selecionado.")
+        return
+    
+    logging.info(f"📁 Diretório PARTE 1 selecionado: {diretorio_faces}")
+    
+    # Selecionar diretório da parte 2 (arquivos)
+    diretorio_arquivos = filedialog.askdirectory(title="Selecione o diretório da PARTE 2 (onde estão os arquivos)")
+    if not diretorio_arquivos:
+        logging.info("❌ Nenhum diretório de arquivos selecionado - operação cancelada")
+        messagebox.showinfo("Cancelado", "Nenhum diretório de arquivos selecionado.")
+        return
+    
+    logging.info(f"📁 Diretório PARTE 2 selecionado: {diretorio_arquivos}")
+    
+    diretorio_faces_path = Path(diretorio_faces)
+    diretorio_arquivos_path = Path(diretorio_arquivos)
+    
+    # Buscar todas as pastas que contêm face.fpk (busca recursiva em subdiretórios)
+    pastas_com_face = []
+    total_diretorios_verificados = 0
+    
+    def buscar_face_fpk_recursivo(diretorio):
+        """Função recursiva para buscar face.fpk em todos os subdiretórios"""
+        nonlocal total_diretorios_verificados
+        for item in diretorio.iterdir():
+            if item.is_dir():
+                total_diretorios_verificados += 1
+                # Verificar se esta pasta contém face.fpk
+                face_fpk = item / "face.fpk"
+                if face_fpk.exists():
+                    pastas_com_face.append(item)
+                    logging.info(f"✅ face.fpk encontrado em: {item}")
+                # Continuar buscando em subdiretórios
+                buscar_face_fpk_recursivo(item)
+    
+    logging.info("🔍 Iniciando busca recursiva por face.fpk...")
+    # Iniciar busca recursiva
+    buscar_face_fpk_recursivo(diretorio_faces_path)
+    
+    logging.info(f"📊 Resumo da busca: {len(pastas_com_face)} pastas com face.fpk encontradas em {total_diretorios_verificados} diretórios verificados")
+    
+    if not pastas_com_face:
+        logging.warning("⚠️ Nenhuma pasta com face.fpk encontrada na parte 1")
+        messagebox.showinfo("Informação", "Nenhuma pasta com face.fpk encontrada na parte 1.")
+        return
+    
+    splash, barra, percentual_label = criar_tela_progresso(janela, "Processando faces...", "Buscando e movendo pastas completas")
+    total = len(pastas_com_face)
+    inicio = time.time()
+    
+    logging.info(f"🔄 Iniciando processamento de {total} pastas com face.fpk")
+    
+    faces_processadas = 0
+    pastas_movidas = 0
+    erros = 0
+    total_itens_ignorados = 0
+    
+    for i, pasta_face in enumerate(pastas_com_face, start=1):
+        try:
+            logging.info(f"🔍 Processando pasta {i}/{total}: {pasta_face.name}")
+            
+            # Ler o arquivo face.fpk
+            face_fpk_path = pasta_face / "face.fpk"
+            logging.info(f"📄 Lendo arquivo: {face_fpk_path}")
+            
+            # Buscar pela linha que contém 'Assets/pes16/model/character/face/real/'
+            nome_jogador = None
+            linhas_lidas = 0
+            try:
+                with open(face_fpk_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    for linha in f:
+                        linhas_lidas += 1
+                        if 'Assets/pes16/model/character/face/real/' in linha:
+                            # Extrair o nome do jogador após 'real/'
+                            partes = linha.split('Assets/pes16/model/character/face/real/')
+                            if len(partes) > 1:
+                                nome_jogador = partes[1].strip().split('/')[0].strip()
+                                logging.info(f"🎯 Nome do jogador encontrado: '{nome_jogador}' na linha {linhas_lidas}")
+                                break
+                
+                if not nome_jogador:
+                    logging.warning(f"⚠️ Nome do jogador não encontrado em {pasta_face.name} após ler {linhas_lidas} linhas")
+                    continue
+                    
+            except Exception as e:
+                logging.warning(f"⚠️ Erro ao ler face.fpk em {pasta_face.name}: {e}")
+                continue
+            
+            # Buscar pasta do jogador na parte 2
+            pasta_jogador = diretorio_arquivos_path / nome_jogador
+            logging.info(f"🔍 Procurando pasta do jogador: {pasta_jogador}")
+            
+            if not pasta_jogador.exists() or not pasta_jogador.is_dir():
+                logging.warning(f"⚠️ Pasta do jogador '{nome_jogador}' não encontrada na parte 2")
+                continue
+            
+            logging.info(f"✅ Pasta do jogador encontrada: {pasta_jogador}")
+            
+            # Mover a pasta completa do jogador para o mesmo diretório onde está a pasta ID (não dentro dela)
+            diretorio_destino = pasta_face.parent  # Diretório pai da pasta ID
+            logging.info(f"📁 Diretório de destino: {diretorio_destino}")
+            
+            # Verificar se a pasta do jogador já existe no destino
+            destino_pasta_completa = diretorio_destino / nome_jogador
+            if destino_pasta_completa.exists():
+                logging.info(f"⏭️ Pasta do jogador já existe, ignorando: {nome_jogador}")
+                total_itens_ignorados += 1
+                continue
+            
+            try:
+                # Copiar a pasta completa do jogador com todo seu conteúdo
+                shutil.copytree(str(pasta_jogador), str(destino_pasta_completa))
+                logging.info(f"📁 Pasta completa copiada com sucesso: {pasta_jogador} → {destino_pasta_completa}")
+                
+                # Contar arquivos copiados
+                arquivos_copiados = sum(1 for _ in destino_pasta_completa.rglob('*') if _.is_file())
+                pastas_movidas += 1
+                faces_processadas += 1
+                
+                logging.info(f"✅ {pasta_face.name}: Pasta completa '{nome_jogador}' copiada com {arquivos_copiados} arquivos")
+                
+            except Exception as e:
+                logging.error(f"❌ Erro ao copiar pasta completa '{nome_jogador}' para {pasta_face.name}: {e}")
+                erros += 1
+                continue
+            
+        except Exception as e:
+            logging.error(f"❌ Erro ao processar {pasta_face.name}: {e}")
+            erros += 1
+        
+        atualizar_progresso(splash, barra, percentual_label, i, total, f"Processando: {pasta_face.name}")
+    
+    splash.destroy()
+    fim = time.time()
+    tempo = round(fim - inicio, 2)
+    
+    # Log final detalhado
+    logging.info("=" * 60)
+    logging.info("📊 RESUMO FINAL DO PROCESSAMENTO")
+    logging.info("=" * 60)
+    logging.info(f"🔍 Total de diretórios verificados: {total_diretorios_verificados}")
+    logging.info(f"📁 Total de pastas com face.fpk encontradas: {len(pastas_com_face)}")
+    logging.info(f"✅ Faces processadas com sucesso: {faces_processadas}")
+    logging.info(f"📁 Total de pastas completas movidas: {pastas_movidas}")
+    logging.info(f"⏭️ Total de pastas ignoradas (já existiam): {total_itens_ignorados}")
+    logging.info(f"❌ Erros encontrados: {erros}")
+    logging.info(f"⏱️ Tempo total de processamento: {tempo}s")
+    logging.info("=" * 60)
+    
+    messagebox.showinfo("Concluído", 
+                       f"Processo de faces finalizado!\n"
+                       f"Faces processadas: {faces_processadas}\n"
+                       f"Pastas completas movidas: {pastas_movidas}\n"
+                       f"Pastas ignoradas: {total_itens_ignorados}\n"
+                       f"Erros encontrados: {erros}\n"
+                       f"Tempo total: {tempo}s")
+    
+    logging.info(f"✅ Processo de faces concluído: {faces_processadas} faces, {pastas_movidas} pastas completas movidas em {tempo}s")
+
 # ================== TESTE CUDA AO INICIAR ==================
 def teste_cuda_inicial():
     try:
@@ -604,10 +773,13 @@ btn1.pack(pady=8)
 btn_faces = tk.Button(scrollable_frame, text="4. Mover todo conteúdo do jogador por FPK", command=mover_faces_por_fpk, width=35, height=2, font=("Arial", 10), bg="orange")
 btn_faces.pack(pady=8)
 
-btn0_1 = tk.Button(scrollable_frame, text="5. Mover apenas pastas existentes (CSV)", command=mover_pastas_por_csv_se_existir, width=35, height=2, font=("Arial", 10), bg="lightcyan")
+btn_faces_completa = tk.Button(scrollable_frame, text="5. Mover pasta completa do jogador por FPK", command=mover_pasta_completa_por_fpk, width=35, height=2, font=("Arial", 10), bg="darkorange")
+btn_faces_completa.pack(pady=8)
+
+btn0_1 = tk.Button(scrollable_frame, text="6. Mover apenas pastas existentes (CSV)", command=mover_pastas_por_csv_se_existir, width=35, height=2, font=("Arial", 10), bg="lightcyan")
 btn0_1.pack(pady=8)
 
-btn0 = tk.Button(scrollable_frame, text="6. Mover pastas e criar nova com base no CSV", command=mover_pastas_por_csv, width=35, height=2, font=("Arial", 10), bg="lightblue")
+btn0 = tk.Button(scrollable_frame, text="7. Mover pastas e criar nova com base no CSV", command=mover_pastas_por_csv, width=35, height=2, font=("Arial", 10), bg="lightblue")
 btn0.pack(pady=8)
 
 btn5 = tk.Button(scrollable_frame, text="❌ Sair", command=sair, width=35, height=2, font=("Arial", 10), bg="lightcoral")
@@ -621,7 +793,7 @@ status_label = tk.Label(scrollable_frame, text="OCR carregando...", font=("Arial
 status_label.pack(pady=10)
 
 # Informações do sistema
-info_label = tk.Label(scrollable_frame, text="Versão 2.2 | Novas ferramentas: Mover faces por FPK, Organização por prefixo e Lista de pastas", font=("Arial", 8), fg="gray")
+info_label = tk.Label(scrollable_frame, text="Versão 2.3 | Novas ferramentas: Mover pasta completa por FPK, Mover conteúdo por FPK, Organização por prefixo e Lista de pastas", font=("Arial", 8), fg="gray")
 info_label.pack(pady=5)
 
 # Empacotar canvas e scrollbar centralizados
