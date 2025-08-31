@@ -397,6 +397,7 @@ def mover_faces_por_fpk():
     faces_processadas = 0
     arquivos_movidos = 0
     erros = 0
+    total_itens_ignorados = 0
     
     for i, pasta_face in enumerate(pastas_com_face, start=1):
         try:
@@ -445,23 +446,17 @@ def mover_faces_por_fpk():
             
             arquivos_movidos_pasta = 0
             pastas_movidas_pasta = 0
+            itens_ignorados = 0
             
             # Processar todos os itens (arquivos e pastas) dentro da pasta do jogador
             for item in pasta_jogador.iterdir():
                 destino = diretorio_destino / item.name
                 
-                # Evitar sobrescrever itens existentes
+                # Verificar se o item já existe - se existir, não copiar
                 if destino.exists():
-                    nome_base = item.stem if item.is_file() else item.name
-                    extensao = item.suffix if item.is_file() else ""
-                    contador = 1
-                    while destino.exists():
-                        if item.is_file():
-                            destino = diretorio_destino / f"{nome_base}_{contador}{extensao}"
-                        else:
-                            destino = diretorio_destino / f"{nome_base}_{contador}"
-                        contador += 1
-                    logging.info(f"🔄 Item renomeado para evitar conflito: {destino.name}")
+                    logging.info(f"⏭️ Item já existe, ignorando: {item.name}")
+                    itens_ignorados += 1
+                    continue
                 
                 try:
                     if item.is_file():
@@ -483,8 +478,15 @@ def mover_faces_por_fpk():
                 arquivos_movidos += arquivos_movidos_pasta
                 faces_processadas += 1
                 logging.info(f"✅ {pasta_face.name}: {arquivos_movidos_pasta} arquivos e {pastas_movidas_pasta} pastas movidos para {diretorio_destino}")
+                if itens_ignorados > 0:
+                    logging.info(f"⏭️ {itens_ignorados} itens ignorados por já existirem")
+                    total_itens_ignorados += itens_ignorados
             else:
-                logging.warning(f"⚠️ {pasta_face.name}: Nenhum item movido de '{nome_jogador}'")
+                if itens_ignorados > 0:
+                    logging.warning(f"⚠️ {pasta_face.name}: Todos os {itens_ignorados} itens já existem, nada foi movido")
+                    total_itens_ignorados += itens_ignorados
+                else:
+                    logging.warning(f"⚠️ {pasta_face.name}: Nenhum item movido de '{nome_jogador}'")
             
         except Exception as e:
             logging.error(f"❌ Erro ao processar {pasta_face.name}: {e}")
@@ -504,6 +506,7 @@ def mover_faces_por_fpk():
     logging.info(f"📁 Total de pastas com face.fpk encontradas: {len(pastas_com_face)}")
     logging.info(f"✅ Faces processadas com sucesso: {faces_processadas}")
     logging.info(f"📋 Total de arquivos movidos: {arquivos_movidos}")
+    logging.info(f"⏭️ Total de itens ignorados (já existiam): {total_itens_ignorados}")
     logging.info(f"❌ Erros encontrados: {erros}")
     logging.info(f"⏱️ Tempo total de processamento: {tempo}s")
     logging.info("=" * 60)
@@ -552,21 +555,25 @@ def sair():
 
 janela = tk.Tk()
 janela.title("Gerenciador de Pastas e Imagens v2.0")
-janela.geometry("420x500")
+janela.geometry("800x800")
 
 # Centralizar janela
 janela.update_idletasks()
-x = (janela.winfo_screenwidth() // 2) - (420 // 2)
-y = (janela.winfo_screenheight() // 2) - (500 // 2)
-janela.geometry(f"420x500+{x}+{y}")
+x = (janela.winfo_screenwidth() // 2) - (800 // 2)
+y = (janela.winfo_screenheight() // 2) - (800 // 2)
+janela.geometry(f"800x800+{x}+{y}")
 
-# Frame principal com scrollbar
+# Frame principal centralizado
 main_frame = tk.Frame(janela)
-main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+main_frame.pack(fill=tk.BOTH, expand=True)
 
-# Canvas para scroll
-canvas = tk.Canvas(main_frame)
-scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+# Frame central para centralizar o conteúdo
+center_frame = tk.Frame(main_frame)
+center_frame.pack(expand=True, fill=tk.BOTH)
+
+# Canvas para scroll centralizado
+canvas = tk.Canvas(center_frame, width=600)  # Largura fixa para centralizar
+scrollbar = tk.Scrollbar(center_frame, orient="vertical", command=canvas.yview)
 scrollable_frame = tk.Frame(canvas)
 
 scrollable_frame.bind(
@@ -574,15 +581,16 @@ scrollable_frame.bind(
     lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
 )
 
-canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+# Centralizar o conteúdo no canvas
+canvas.create_window((300, 0), window=scrollable_frame, anchor="n")  # 300 = 600/2 para centralizar
 canvas.configure(yscrollcommand=scrollbar.set)
 
-# Título principal
-label = tk.Label(scrollable_frame, text="Gerenciador de Pastas e Imagens v2.0", font=("Arial", 14, "bold"), fg="darkblue")
-label.pack(pady=15)
+# Título principal centralizado
+label = tk.Label(scrollable_frame, text="Gerenciador de Pastas e Imagens v2.0", font=("Arial", 16, "bold"), fg="darkblue")
+label.pack(pady=20)
 
-subtitle = tk.Label(scrollable_frame, text="Escolha uma opção:", font=("Arial", 10), fg="gray")
-subtitle.pack(pady=5)
+subtitle = tk.Label(scrollable_frame, text="Escolha uma opção:", font=("Arial", 12), fg="gray")
+subtitle.pack(pady=10)
 
 btn4 = tk.Button(scrollable_frame, text="1. Listar todas as pastas em um arquivo .txt", command=listar_pastas_em_txt, width=35, height=2, font=("Arial", 10), bg="plum")
 btn4.pack(pady=8)
@@ -616,9 +624,9 @@ status_label.pack(pady=10)
 info_label = tk.Label(scrollable_frame, text="Versão 2.2 | Novas ferramentas: Mover faces por FPK, Organização por prefixo e Lista de pastas", font=("Arial", 8), fg="gray")
 info_label.pack(pady=5)
 
-# Empacotar canvas e scrollbar
-canvas.pack(side="left", fill="both", expand=True)
-scrollbar.pack(side="right", fill="y")
+# Empacotar canvas e scrollbar centralizados
+canvas.pack(side="left", fill="both", expand=True, padx=(100, 0))  # Margem esquerda para centralizar
+scrollbar.pack(side="right", fill="y", padx=(0, 100))  # Margem direita para centralizar
 
 # Configurar scroll com mouse
 def _on_mousewheel(event):
