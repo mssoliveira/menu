@@ -12,3 +12,6 @@ easyocr>=1.7.2
 #
 # Para Python 3.13 (somente CPU):
 # pip install easyocr (o torch será instalado automaticamente apenas CPU)
+
+# ===== CRIAÇÃO DE EXECUTÁVEL =====
+pyinstaller>=6.0.0
